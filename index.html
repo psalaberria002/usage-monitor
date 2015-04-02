@@ -1,0 +1,206 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="http://code.highcharts.com/stock/highstock.js"></script>
+    <script type="text/javascript" src="dark-theme.js"></script>
+    <script>
+    var socket = io('http://localhost:3000');
+
+    $(function () {
+
+    Highcharts.setOptions({
+        global : {
+            useUTC : false
+        }
+    });
+
+    // Memory chart
+    $('#container').highcharts('StockChart', {
+        chart : {
+            events : {
+                load : function () {
+                    var self = this;
+                    var series = self.series[0];
+                    socket.emit('give me max memory');
+                    socket.on('here you have max memory',function(max){
+                        console.log(self.yAxis);
+                        self.yAxis.ceiling=max;
+                        self.yAxis.max=max;
+                    });
+                    socket.on('memory data updated', function (x,y) {
+                        console.log(x+" "+y)
+                        series.addPoint([x, y], true, true);
+                    });
+                }
+            }
+        },
+
+        rangeSelector: {
+            buttons: [{
+                count: 1,
+                type: 'minute',
+                text: '1M'
+            }, {
+                count: 5,
+                type: 'minute',
+                text: '5M'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+            inputEnabled: false,
+            selected: 0
+        },
+
+        title : {
+            text : 'Real time memory usage'
+        },
+
+        exporting: {
+            enabled: false
+        },
+
+        series : [{
+            name : 'Memory (MB)',
+            type: 'area',
+            data : (function () {
+                // generate an array of random data
+                var data = [], time = (new Date()).getTime(),i;
+
+                for (i = -59; i <= 0; i += 1) {
+                    data.push([
+                        time,
+                        0
+                    ]);
+                }
+                return data;
+            }()),
+            fillColor : {
+                    linearGradient : {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops : [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                },
+                threshold: null
+        }],
+        yAxis: {
+            floor:0,
+            min:0,
+            gridLineDashStyle: 'longdash',
+            labels: {
+                    formatter: function() {
+                        var maxElement = this.axis.max;
+                        var gb = 1000, mb=1,kb=0.001;
+                        if (maxElement > gb) {
+                            return (this.value / gb).toFixed(2) + " GB";
+                        } else if (maxElement > mb) {
+                            return (this.value / mb).toFixed(2) + " MB";
+                        } else if (maxElement > kb) {
+                            return (this.value / kb).toFixed(1) + " KB";
+                        } else {
+                            return (this.value) + " B";
+                        }
+                    }
+                }
+        }
+
+    });
+
+// CPU chart
+$('#container2').highcharts('StockChart', {
+    chart : {
+        events : {
+            load : function () {
+                var self = this;
+                var series = self.series[0];
+                socket.on('cpu data updated', function (x,y) {
+                    console.log(x+" "+y)
+                    series.addPoint([x, y], true, true);
+                });
+            }
+        }
+    },
+
+    rangeSelector: {
+        buttons: [{
+            count: 1,
+            type: 'minute',
+            text: '1M'
+        }, {
+            count: 5,
+            type: 'minute',
+            text: '5M'
+        }, {
+            type: 'all',
+            text: 'All'
+        }],
+        inputEnabled: false,
+        selected: 0
+    },
+
+    title : {
+        text : 'Real time cpu usage'
+    },
+
+    exporting: {
+        enabled: false
+    },
+
+    series : [{
+        name : 'CPU Usage (%)',
+        type: 'areaspline',
+        data : (function () {
+            // generate an array of random data
+            var data = [], time = (new Date()).getTime(),i;
+
+            for (i = -59; i <= 0; i += 1) {
+                data.push([
+                    time,
+                    0
+                ]);
+            }
+            return data;
+        }()),
+        fillColor : {
+                linearGradient : {
+                    x1: 0,
+                    y1: 0,
+                    x2: 0,
+                    y2: 1
+                },
+                stops : [
+                    [0, Highcharts.getOptions().colors[0]],
+                    [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                ]
+            },
+            threshold: null
+    }],
+    yAxis: {
+        floor:0,
+        ceiling: 100,
+        gridLineDashStyle: 'longdash',
+        labels: {
+                formatter: function() {
+                    return (this.value) + "%";
+                }
+            }
+    }
+});
+});
+
+    </script>
+</head>
+<body>
+<div id="container" style="height: 400px; width:50%;float: left"></div>
+<div id="container2" style="height: 400px; width:50%;float: left"></div>
+</body>
+</html>
